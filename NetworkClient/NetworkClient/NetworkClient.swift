@@ -65,12 +65,12 @@ public class NetworkClient {
                                    queryParameters: Parameters? = nil,
                                    body: HTTPBody? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((Data?, URLResponse?, Error?) -> Void)) {
+                                   completion: @escaping ((Result<Data, Error>) -> Void)) {
         
         // MARK: Build Request
         
         guard var urlComponents = URLComponents(string: url) else {
-            completion(nil, nil, NetworkError.invalidURL)
+            completion(.failure(NetworkError.invalidURL))
             return
         }
         
@@ -79,7 +79,7 @@ public class NetworkClient {
         }
         
         guard let url = urlComponents.url else {
-            completion(nil, nil, NetworkError.invalidURL)
+            completion(.failure(NetworkError.invalidURL))
             return
         }
         
@@ -95,7 +95,7 @@ public class NetworkClient {
                 do {
                     urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body.parameters)
                 } catch {
-                    completion(nil, nil, error)
+                    completion(.failure(error))
                     return
                 }
             }
@@ -105,21 +105,21 @@ public class NetworkClient {
         
         session.dataTask(with: urlRequest) { (data, urlResponse, error) in
             if let error = error {
-                completion(nil, urlResponse, error)
+                completion(.failure(error))
                 return
             }
                 
             guard let statusCode = (urlResponse as? HTTPURLResponse)?.statusCode, validStatusCodes.contains(statusCode) else {
-                completion(nil, urlResponse, NetworkError.invalidStatusCode)
+                completion(.failure(NetworkError.invalidStatusCode))
                 return
             }
             
             guard let data = data else {
-                completion(nil, urlResponse, NetworkError.noData)
+                completion(.failure(NetworkError.noData))
                 return
             }
             
-            completion(data, urlResponse, nil)
+            completion(.success(data))
         }.resume()
     }
     
@@ -128,18 +128,21 @@ public class NetworkClient {
                                    queryParameters: Parameters? = nil,
                                    body: HTTPBody? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((URLResponse?, Error?) -> Void)) {
+                                   completion: @escaping ((Result<Void, Error>) -> Void)) {
         
-        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { (data, urlResponse, error) in
+        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { result in
             
-            if let error = error {
+            // `result` will _never_ be `success`. We have to examine the error to determine if the request was successful or not
+            
+            switch result {
+            case .success:
+                completion(.success(()))
+            case .failure(let error):
                 if case NetworkError.noData = error {
-                    completion(urlResponse, nil)
+                    completion(.success(()))
                 } else {
-                    completion(urlResponse, error)
+                    completion(.failure(error))
                 }
-            } else {
-                completion(urlResponse, nil)
             }
         }
     }
@@ -149,18 +152,19 @@ public class NetworkClient {
                                    queryParameters: Parameters? = nil,
                                    body: HTTPBody? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((Any?, URLResponse?, Error?) -> Void)) {
+                                   completion: @escaping ((Result<Any, Error>) -> Void)) {
         
-        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { data, urlResponse, error in
+        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { result in
             
-            if let data = data {
+            switch result {
+            case .success(let data):
                 do {
-                    completion(try JSONSerialization.jsonObject(with: data), nil, nil)
+                    completion(.success(try JSONSerialization.jsonObject(with: data)))
                 } catch {
-                    completion(nil, urlResponse, error)
+                    completion(.failure(error))
                 }
-            } else {
-                completion(nil, urlResponse, error)
+            case .failure(let error):
+                completion(.failure(error))
             }
         }
     }
@@ -170,18 +174,19 @@ public class NetworkClient {
                                              queryParameters: Parameters? = nil,
                                              body: HTTPBody? = nil,
                                              validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                             completion: @escaping DecodableRequestHandler<T>) {
+                                             completion: @escaping ((Result<T, Error>) -> Void)) {
         
-        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { (data, urlResponse, error) in
+        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { result in
             
-            if let data = data {
+            switch result {
+            case .success(let data):
                 do {
-                    completion(try JSONDecoder().decode(T.self, from: data), urlResponse, nil)
+                    completion(.success(try JSONDecoder().decode(T.self, from: data)))
                 } catch {
-                    completion(nil, urlResponse, error)
+                    completion(.failure(error))
                 }
-            } else {
-                completion(nil, urlResponse, error)
+            case .failure(let error):
+                completion(.failure(error))
             }
         }
     }

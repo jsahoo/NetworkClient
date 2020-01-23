@@ -15,8 +15,14 @@ class NetworkClientTests: XCTestCase {
         let expectation = self.expectation(description: "Request should succeed; response should contain a single item.")
         
         let url = "https://postman-echo.com/get"
-        NetworkClient.request(url: url) { (responseObject: PostmanGetResponse?, urlResponse, error) in
-            XCTAssertNotNil(responseObject)
+        NetworkClient.request(url: url) { (result: Result<PostmanGetResponse, Error>) in
+            
+            switch result {
+            case .success:
+                break
+            case .failure(let error):
+                XCTFail(error.localizedDescription)
+            }
             expectation.fulfill()
         }
         
@@ -34,11 +40,14 @@ class NetworkClientTests: XCTestCase {
         let expectation = self.expectation(description: "Request should succeed; response should contain an array of items.")
         
         let url = "https://jsonplaceholder.typicode.com/photos"
-        NetworkClient.request(url: url) { (photos: [Photo]?, urlResponse, error) in
-            XCTAssertNotNil(photos)
-            XCTAssert(photos?.isEmpty == false)
-            XCTAssertNotNil(urlResponse)
-            XCTAssertNil(error)
+        NetworkClient.request(url: url) { (result: Result<[Photo], Error>) in
+            
+            switch result {
+            case .success(let photos):
+                XCTAssert(photos.isEmpty == false)
+            case .failure(let error):
+                XCTFail(error.localizedDescription)
+            }
             expectation.fulfill()
         }
         
@@ -50,9 +59,14 @@ class NetworkClientTests: XCTestCase {
         
         let url = "https://postman-echo.com/get"
         let queryParameters: Parameters = ["foo1": "bar1", "foo2": "bar2"]
-        NetworkClient.request(url: url, queryParameters: queryParameters) { (responseObject: PostmanGetResponse?, urlResponse, error) in
-            XCTAssertNotNil(responseObject)
-            XCTAssertEqual(responseObject?.args, queryParameters as? [String: String])
+        NetworkClient.request(url: url, queryParameters: queryParameters) { (result: Result<PostmanGetResponse, Error>) in
+            
+            switch result {
+            case .success(let responseObject):
+                XCTAssertEqual(responseObject.args, queryParameters as? [String: String])
+            case .failure(let error):
+                XCTFail(error.localizedDescription)
+            }
             expectation.fulfill()
         }
         
@@ -63,9 +77,14 @@ class NetworkClientTests: XCTestCase {
         let expectation = self.expectation(description: "Request should succeed; server should recognize query parameters embedded in the URL.")
         
         let url = "https://postman-echo.com/get?foo1=bar1&foo2=bar2"
-        NetworkClient.request(url: url) { (responseObject: PostmanGetResponse?, urlResponse, error) in
-            XCTAssertNotNil(responseObject)
-            XCTAssertEqual(responseObject?.args, ["foo1": "bar1", "foo2": "bar2"])
+        NetworkClient.request(url: url) { (result: Result<PostmanGetResponse, Error>) in
+            
+            switch result {
+            case .success(let responseObject):
+                XCTAssertEqual(responseObject.args, ["foo1": "bar1", "foo2": "bar2"])
+            case .failure(let error):
+                XCTFail(error.localizedDescription)
+            }
             expectation.fulfill()
         }
         
@@ -77,10 +96,14 @@ class NetworkClientTests: XCTestCase {
         let expectation = self.expectation(description: "Request should fail due to invalid status code.")
         
         let url = "https://postman-echo.com/get"
-        NetworkClient.request(url: url, validStatusCodes: [500]) { (responseObject: PostmanGetResponse?, urlResponse, error) in
-            XCTAssertNil(responseObject)
-            XCTAssertNotNil(error)
-            XCTAssert((error as? NetworkError) == .invalidStatusCode)
+        NetworkClient.request(url: url, validStatusCodes: [500]) { (result: Result<PostmanGetResponse, Error>) in
+            
+            switch result {
+            case .success:
+                XCTFail()
+            case .failure(let error):
+                XCTAssert((error as? NetworkError) == .invalidStatusCode)
+            }
             expectation.fulfill()
         }
         
