@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Network
 
 public typealias Parameters = [String: Any]
 public typealias DecodableRequestHandler<T> = ((T?, URLResponse?, Error?) -> Void)
@@ -51,6 +52,7 @@ public class HTTPStatusCodes {
 }
 
 public enum NetworkError: Error {
+    case noNetworkConnection
     case invalidURL
     case invalidStatusCode
     case noData
@@ -58,7 +60,19 @@ public enum NetworkError: Error {
 
 public class NetworkClient {
     
+    private static let networkMonitor = NWPathMonitor()
+    private static var hasNetworkConnection = true
+    private static var hasBeenInitialized = false
+    
     private static let session = URLSession(configuration: .default)
+    
+    public static func initialize() {
+        networkMonitor.pathUpdateHandler = { path in
+            hasNetworkConnection = path.status == .satisfied
+        }
+        networkMonitor.start(queue: DispatchQueue(label: "NWPathMonitor"))
+        hasBeenInitialized = true
+    }
     
     public static func requestData(url: String,
                                    method: HTTPMethod = .get,
@@ -67,6 +81,15 @@ public class NetworkClient {
                                    headers: [String: String]?,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
                                    completion: @escaping ((Result<Data, Error>) -> Void)) {
+        
+        guard hasBeenInitialized else {
+            fatalError("NetworkClient has not been initialized. Call NetworkClient.initialize() before performing any other functions.")
+        }
+        
+        guard hasNetworkConnection else {
+            completion(.failure(NetworkError.noNetworkConnection))
+            return
+        }
         
         // MARK: Build Request
         
