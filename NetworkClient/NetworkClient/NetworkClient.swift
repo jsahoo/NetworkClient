@@ -64,6 +64,7 @@ public class NetworkClient {
                                    method: HTTPMethod = .get,
                                    queryParameters: Parameters? = nil,
                                    body: HTTPBody? = nil,
+                                   headers: [String: String]?,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
                                    completion: @escaping ((Result<Data, Error>) -> Void)) {
         
@@ -101,6 +102,8 @@ public class NetworkClient {
             }
         }
         
+        headers?.forEach { urlRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
+        
         // MARK: Execute Request
         
         session.dataTask(with: urlRequest) { (data, urlResponse, error) in
@@ -127,10 +130,11 @@ public class NetworkClient {
                                    method: HTTPMethod = .get,
                                    queryParameters: Parameters? = nil,
                                    body: HTTPBody? = nil,
+                                   headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
                                    completion: @escaping ((Result<Void, Error>) -> Void)) {
         
-        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { result in
+        requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { result in
             
             // `result` will _never_ be `success`. We have to examine the error to determine if the request was successful or not
             
@@ -151,10 +155,11 @@ public class NetworkClient {
                                    method: HTTPMethod = .get,
                                    queryParameters: Parameters? = nil,
                                    body: HTTPBody? = nil,
+                                   headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
                                    completion: @escaping ((Result<Any, Error>) -> Void)) {
         
-        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { result in
+        requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { result in
             
             switch result {
             case .success(let data):
@@ -173,10 +178,11 @@ public class NetworkClient {
                                              method: HTTPMethod = .get,
                                              queryParameters: Parameters? = nil,
                                              body: HTTPBody? = nil,
+                                             headers: [String: String]? = nil,
                                              validStatusCodes: [Int] = HTTPStatusCodes.successes,
                                              completion: @escaping ((Result<T, Error>) -> Void)) {
         
-        requestData(url: url, method: method, queryParameters: queryParameters, body: body, validStatusCodes: validStatusCodes) { result in
+        requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { result in
             
             switch result {
             case .success(let data):
