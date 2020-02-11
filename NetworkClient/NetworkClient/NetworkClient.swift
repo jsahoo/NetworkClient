@@ -53,9 +53,11 @@ public class HTTPStatusCodes {
 
 public enum NetworkError: Error {
     case noNetworkConnection
+    case noResponse
     case invalidURL
-    case invalidStatusCode
+    case invalidStatusCode(code: Int)
     case noData
+    case deserializationFailure
 }
 
 public class NetworkClient {
@@ -134,9 +136,14 @@ public class NetworkClient {
                 completion(.failure(error))
                 return
             }
+            
+            guard let statusCode = (urlResponse as? HTTPURLResponse)?.statusCode else {
+                completion(.failure(NetworkError.noResponse))
+                return
+            }
                 
-            guard let statusCode = (urlResponse as? HTTPURLResponse)?.statusCode, validStatusCodes.contains(statusCode) else {
-                completion(.failure(NetworkError.invalidStatusCode))
+            guard validStatusCodes.contains(statusCode) else {
+                completion(.failure(NetworkError.invalidStatusCode(code: statusCode)))
                 return
             }
             
