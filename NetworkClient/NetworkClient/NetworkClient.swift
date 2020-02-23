@@ -33,13 +33,23 @@ public enum HTTPBodyFormat {
     }
 }
 
-public struct HTTPBody {
-    var parameters: Parameters
-    var format: HTTPBodyFormat
+public protocol HTTPBody { }
+
+public struct HTTPBodyFromDictionary: HTTPBody {
+    public var parameters: Parameters
+    public var format: HTTPBodyFormat
     
     public init(parameters: Parameters, format: HTTPBodyFormat) {
         self.parameters = parameters
         self.format = format
+    }
+}
+
+public struct HTTPBodyFromEncodable: HTTPBody {
+    var data: Data
+    
+    public init<T: Encodable>(_ object: T) throws {
+        self.data = try JSONEncoder().encode(object)
     }
 }
 
@@ -54,10 +64,26 @@ public class HTTPStatusCodes {
 public enum NetworkError: Error {
     case noNetworkConnection
     case noResponse
-    case invalidURL
-    case invalidStatusCode(code: Int)
-    case noData
+    case invalidURL(url: String)
+    case invalidResponse(response: HTTPURLResponse)
+    case noData(response: HTTPURLResponse)
     case deserializationFailure
+    
+    public var statusCode: Int? {
+        switch self {
+        case .invalidResponse(let response), .noData(let response):
+            return response.statusCode
+        default:
+            return nil
+        }
+    }
+}
+
+public struct HTTPError: Error {
+    public var urlResponse: HTTPURLResponse
+    public var statusCode: Int {
+        urlResponse.statusCode
+    }
 }
 
 public class NetworkClient {
@@ -76,7 +102,7 @@ public class NetworkClient {
         hasBeenInitialized = true
     }
     
-    public static func requestData(url: String,
+    public static func requestData(url urlString: String,
                                    method: HTTPMethod = .get,
                                    queryParameters: Parameters? = nil,
                                    body: HTTPBody? = nil,
@@ -95,8 +121,8 @@ public class NetworkClient {
         
         // MARK: Build Request
         
-        guard var urlComponents = URLComponents(string: url) else {
-            completion(.failure(NetworkError.invalidURL))
+        guard var urlComponents = URLComponents(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL(url: urlString)))
             return
         }
         
@@ -105,14 +131,14 @@ public class NetworkClient {
         }
         
         guard let url = urlComponents.url else {
-            completion(.failure(NetworkError.invalidURL))
+            completion(.failure(NetworkError.invalidURL(url: urlString)))
             return
         }
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method.rawValue
         
-        if let body = body {
+        if let body = body as? HTTPBodyFromDictionary {
             urlRequest.addValue(body.format.headerValue, forHTTPHeaderField: "Content-Type")
             switch body.format {
             case .applicationXWWWFormURLEncoded:
@@ -125,6 +151,9 @@ public class NetworkClient {
                     return
                 }
             }
+        } else if let body = body as? HTTPBodyFromEncodable {
+            urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            urlRequest.httpBody = body.data
         }
         
         headers?.forEach { urlRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
@@ -137,18 +166,18 @@ public class NetworkClient {
                 return
             }
             
-            guard let statusCode = (urlResponse as? HTTPURLResponse)?.statusCode else {
+            guard let urlResponse = urlResponse as? HTTPURLResponse else {
                 completion(.failure(NetworkError.noResponse))
                 return
             }
                 
-            guard validStatusCodes.contains(statusCode) else {
-                completion(.failure(NetworkError.invalidStatusCode(code: statusCode)))
+            guard validStatusCodes.contains(urlResponse.statusCode) else {
+                completion(.failure(NetworkError.invalidResponse(response: urlResponse)))
                 return
             }
             
             guard let data = data else {
-                completion(.failure(NetworkError.noData))
+                completion(.failure(NetworkError.noData(response: urlResponse)))
                 return
             }
             
