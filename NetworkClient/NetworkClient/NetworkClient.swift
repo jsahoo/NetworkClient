@@ -65,13 +65,13 @@ public enum NetworkError: Error {
     case noNetworkConnection
     case noResponse
     case invalidURL(url: String)
-    case invalidResponse(response: HTTPURLResponse)
+    case invalidResponse(response: HTTPURLResponse, data: Data?)
     case noData(response: HTTPURLResponse)
     case deserializationFailure
     
     public var statusCode: Int? {
         switch self {
-        case .invalidResponse(let response), .noData(let response):
+        case .invalidResponse(let response, _), .noData(let response):
             return response.statusCode
         default:
             return nil
@@ -172,16 +172,16 @@ public class NetworkClient {
             }
                 
             guard validStatusCodes.contains(urlResponse.statusCode) else {
-                completion(.failure(NetworkError.invalidResponse(response: urlResponse)))
+                completion(.failure(NetworkError.invalidResponse(response: urlResponse, data: data)))
                 return
             }
             
-            guard let data = data else {
+            guard let unwrappedData = data else {
                 completion(.failure(NetworkError.noData(response: urlResponse)))
                 return
             }
             
-            completion(.success(data))
+            completion(.success(unwrappedData))
         }.resume()
     }
     
