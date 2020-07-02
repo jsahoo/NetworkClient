@@ -79,33 +79,21 @@ public struct HTTPError: Error {
     }
 }
 
-public struct NetworkResponse<T> {
-
-    /// The result of the request and response serialization.
-    public let result: Result<T, Error>
+public struct ResponseMetadata {
 
     /// The URL request sent to the server.
-    public var request: URLRequest?
+    public fileprivate(set) var request: URLRequest?
 
     /// The server's response to the URL request.
-    public let response: HTTPURLResponse?
+    public fileprivate(set) var response: HTTPURLResponse?
 
     /// The data returned by the server.
-    public let data: Data?
+    public fileprivate(set) var data: Data?
 
-    public init(result: Result<T, Error>, request: URLRequest? = nil, response: HTTPURLResponse? = nil, data: Data? = nil) {
-        self.result = result
+    public init(request: URLRequest? = nil, response: HTTPURLResponse? = nil, data: Data? = nil) {
         self.request = request
         self.response = response
         self.data = data
-    }
-
-    public init(error: Error, request: URLRequest? = nil, response: HTTPURLResponse? = nil, data: Data? = nil) {
-        self.init(result: .failure(error), request: request, response: response, data: data)
-    }
-
-    public init(value: T, request: URLRequest?, response: HTTPURLResponse?, data: Data?) {
-        self.init(result: .success(value), request: request, response: response, data: data)
     }
 }
 
@@ -140,7 +128,7 @@ public class NetworkClient {
                                    body: HTTPBody? = nil,
                                    headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((NetworkResponse<Data>) -> Void)) {
+                                   completion: @escaping ((Result<Data, Error>, ResponseMetadata?) -> Void)) {
         
         guard hasBeenInitialized else {
             fatalError("NetworkClient has not been initialized. Call NetworkClient.initialize() before performing any other functions.")
@@ -149,7 +137,7 @@ public class NetworkClient {
         // MARK: Build Request
 
         guard var urlComponents = URLComponents(string: urlString) else {
-            completion(.init(error: NetworkError.invalidURL(url: urlString)))
+            completion(.failure(NetworkError.invalidURL(url: urlString)), nil)
             return
         }
         
@@ -158,12 +146,13 @@ public class NetworkClient {
         }
         
         guard let url = urlComponents.url else {
-            completion(.init(error: NetworkError.invalidURL(url: urlString)))
+            completion(.failure(NetworkError.invalidURL(url: urlString)), nil)
             return
         }
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method.rawValue
+        var metadata = ResponseMetadata(request: urlRequest)
         
         if let body = body as? HTTPBodyFromDictionary {
             urlRequest.addValue(body.format.headerValue, forHTTPHeaderField: "Content-Type")
@@ -174,7 +163,7 @@ public class NetworkClient {
                 do {
                     urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body.parameters)
                 } catch {
-                    completion(.init(error: error, request: urlRequest))
+                    completion(.failure(error), metadata)
                     return
                 }
             }
@@ -184,36 +173,40 @@ public class NetworkClient {
         }
         
         headers?.forEach { urlRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
-        
+        metadata.request = urlRequest
+
         // MARK: Execute Request
 
         guard hasNetworkConnection else {
-            completion(NetworkResponse(error: NetworkError.noNetworkConnection, request: urlRequest))
+            completion(.failure(NetworkError.noNetworkConnection), metadata)
             return
         }
         
         session.dataTask(with: urlRequest) { (data, urlResponse, error) in
+            metadata.data = data
+            metadata.response = urlResponse as? HTTPURLResponse
+
             if let error = error {
-                completion(.init(error: error, request: urlRequest, response: urlResponse as? HTTPURLResponse, data: data))
+                completion(.failure(error), metadata)
                 return
             }
             
             guard let urlResponse = urlResponse as? HTTPURLResponse else {
-                completion(.init(error: NetworkError.noResponse, request: urlRequest, response: nil, data: data))
+                completion(.failure(NetworkError.noResponse), metadata)
                 return
             }
                 
             guard validStatusCodes.contains(urlResponse.statusCode) else {
-                completion(.init(error: NetworkError.invalidStatusCode(urlResponse.statusCode), request: urlRequest, response: urlResponse, data: data))
+                completion(.failure(NetworkError.invalidStatusCode(urlResponse.statusCode)), metadata)
                 return
             }
             
             guard let unwrappedData = data else {
-                completion(.init(error: NetworkError.noData, request: urlRequest, response: urlResponse, data: nil))
+                completion(.failure(NetworkError.noData), metadata)
                 return
             }
             
-            completion(.init(value: unwrappedData, request: urlRequest, response: urlResponse, data: unwrappedData))
+            completion(.success(unwrappedData), metadata)
         }.resume()
     }
 
@@ -225,10 +218,10 @@ public class NetworkClient {
                                    body: HTTPBody? = nil,
                                    headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((NetworkResponse<Data>) -> Void)) {
+                                   completion: @escaping ((Result<Data, Error>, ResponseMetadata?) -> Void)) {
 
         guard let baseURL = baseURL else {
-            completion(.init(error: NetworkError.missingBaseURL))
+            completion(.failure(NetworkError.missingBaseURL), nil)
             return
         }
 
@@ -244,7 +237,7 @@ public class NetworkClient {
                                    body: HTTPBody? = nil,
                                    headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((NetworkResponse<Void>) -> Void)) {
+                                   completion: @escaping ((ResponseMetadata<Void>) -> Void)) {
 
         requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { response in
 
@@ -374,11 +367,11 @@ public class NetworkClient {
 
 extension NetworkClient {
 
-    fileprivate static func transformSuccessfulResponse<T,U>(_ response: NetworkResponse<T>, newValue: U) -> NetworkResponse<U> {
-        return NetworkResponse(value: newValue, request: response.request, response: response.response, data: response.data)
+    fileprivate static func transformSuccessfulResponse<T,U>(_ response: ResponseMetadata<T>, newValue: U) -> ResponseMetadata<U> {
+        return ResponseMetadata(value: newValue, request: response.request, response: response.response, data: response.data)
     }
 
-    fileprivate static func transformErrorResponse<T,U>(_ response: NetworkResponse<T>, error: Error) -> NetworkResponse<U> {
+    fileprivate static func transformErrorResponse<T,U>(_ response: ResponseMetadata<T>, error: Error) -> ResponseMetadata<U> {
         return .init(error: error, request: response.request, response: response.response, data: response.data)
     }
 }

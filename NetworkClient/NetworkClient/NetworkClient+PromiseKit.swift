@@ -11,41 +11,24 @@
 import Foundation
 import PromiseKit
 
-public struct PromiseResponse<T> {
-
-    /// The successfully deserialized value.
-    public let value: T
-
-    /// The URL request sent to the server.
-    public var request: URLRequest?
-
-    /// The server's response to the URL request.
-    public let response: HTTPURLResponse?
-
-    /// The data returned by the server.
-    public let data: Data?
-
-    public init<U>(value: T, networkResponse: NetworkResponse<U>) {
-        self.value = value
-        self.request = networkResponse.request
-        self.response = networkResponse.response
-        self.data = networkResponse.data
-    }
-}
-
 extension NetworkClient {
 
     /// Executes a network request that returns Data.
-    public static func requestData(url: String,
-                                   method: HTTPMethod = .get,
-                                   queryParameters: Parameters? = nil,
-                                   body: HTTPBody? = nil,
-                                   headers: [String: String]? = nil,
-                                   validStatusCodes: [Int] = HTTPStatusCodes.successes) -> Promise<NetworkResponse<Data>> {
+    public static func requestDataWithMetadata(url: String,
+                                               method: HTTPMethod = .get,
+                                               queryParameters: Parameters? = nil,
+                                               body: HTTPBody? = nil,
+                                               headers: [String: String]? = nil,
+                                               validStatusCodes: [Int] = HTTPStatusCodes.successes) -> Promise<(Data, ResponseMetadata?)> {
 
         return Promise { seal in
-            requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { response in
-                seal.fulfill(response)
+            requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { result, metadata in
+                switch result {
+                case .success(let data):
+                    return seal.fulfill((data, metadata))
+                case .failure(let error):
+                    return seal.reject(error)
+                }
             }
         }
     }
@@ -58,9 +41,14 @@ extension NetworkClient {
                                    headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes) -> Promise<Data> {
 
+        // TWO OPTIONS - HANDLE WITH PROMISES, OR HANDLE WITH CLOSURES
+        return requestDataWithMetadata(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes).then { date, metadata -> Promise<Data> in
+            return .value(date)
+        }
+
         return Promise { seal in
-            requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { response in
-                switch response.result {
+            requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { result, _ in
+                switch result {
                 case .success(let data):
                     return seal.fulfill(data)
                 case .failure(let error):
