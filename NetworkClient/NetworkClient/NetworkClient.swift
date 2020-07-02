@@ -66,24 +66,46 @@ public enum NetworkError: Error {
     case noResponse
     case missingBaseURL
     case invalidURL(url: String)
-    case invalidResponse(response: HTTPURLResponse, data: Data?)
-    case noData(response: HTTPURLResponse)
+    case invalidStatusCode(Int)
+    case invalidResponse
+    case noData
     case deserializationFailure
-    
-    public var statusCode: Int? {
-        switch self {
-        case .invalidResponse(let response, _), .noData(let response):
-            return response.statusCode
-        default:
-            return nil
-        }
-    }
 }
 
 public struct HTTPError: Error {
     public var urlResponse: HTTPURLResponse
     public var statusCode: Int {
         urlResponse.statusCode
+    }
+}
+
+public struct NetworkResponse<T> {
+
+    /// The result of the request and response serialization.
+    public let result: Result<T, Error>
+
+    /// The URL request sent to the server.
+    public var request: URLRequest?
+
+    /// The server's response to the URL request.
+    public let response: HTTPURLResponse?
+
+    /// The data returned by the server.
+    public let data: Data?
+
+    public init(result: Result<T, Error>, request: URLRequest? = nil, response: HTTPURLResponse? = nil, data: Data? = nil) {
+        self.result = result
+        self.request = request
+        self.response = response
+        self.data = data
+    }
+
+    public init(error: Error, request: URLRequest? = nil, response: HTTPURLResponse? = nil, data: Data? = nil) {
+        self.init(result: .failure(error), request: request, response: response, data: data)
+    }
+
+    public init(value: T, request: URLRequest?, response: HTTPURLResponse?, data: Data?) {
+        self.init(result: .success(value), request: request, response: response, data: data)
     }
 }
 
@@ -118,21 +140,16 @@ public class NetworkClient {
                                    body: HTTPBody? = nil,
                                    headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((Result<Data, Error>) -> Void)) {
+                                   completion: @escaping ((NetworkResponse<Data>) -> Void)) {
         
         guard hasBeenInitialized else {
             fatalError("NetworkClient has not been initialized. Call NetworkClient.initialize() before performing any other functions.")
         }
-        
-        guard hasNetworkConnection else {
-            completion(.failure(NetworkError.noNetworkConnection))
-            return
-        }
-        
+
         // MARK: Build Request
 
         guard var urlComponents = URLComponents(string: urlString) else {
-            completion(.failure(NetworkError.invalidURL(url: urlString)))
+            completion(.init(error: NetworkError.invalidURL(url: urlString)))
             return
         }
         
@@ -141,7 +158,7 @@ public class NetworkClient {
         }
         
         guard let url = urlComponents.url else {
-            completion(.failure(NetworkError.invalidURL(url: urlString)))
+            completion(.init(error: NetworkError.invalidURL(url: urlString)))
             return
         }
         
@@ -157,7 +174,7 @@ public class NetworkClient {
                 do {
                     urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body.parameters)
                 } catch {
-                    completion(.failure(error))
+                    completion(.init(error: error, request: urlRequest))
                     return
                 }
             }
@@ -169,29 +186,34 @@ public class NetworkClient {
         headers?.forEach { urlRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
         
         // MARK: Execute Request
+
+        guard hasNetworkConnection else {
+            completion(NetworkResponse(error: NetworkError.noNetworkConnection, request: urlRequest))
+            return
+        }
         
         session.dataTask(with: urlRequest) { (data, urlResponse, error) in
             if let error = error {
-                completion(.failure(error))
+                completion(.init(error: error, request: urlRequest, response: urlResponse as? HTTPURLResponse, data: data))
                 return
             }
             
             guard let urlResponse = urlResponse as? HTTPURLResponse else {
-                completion(.failure(NetworkError.noResponse))
+                completion(.init(error: NetworkError.noResponse, request: urlRequest, response: nil, data: data))
                 return
             }
                 
             guard validStatusCodes.contains(urlResponse.statusCode) else {
-                completion(.failure(NetworkError.invalidResponse(response: urlResponse, data: data)))
+                completion(.init(error: NetworkError.invalidStatusCode(urlResponse.statusCode), request: urlRequest, response: urlResponse, data: data))
                 return
             }
             
             guard let unwrappedData = data else {
-                completion(.failure(NetworkError.noData(response: urlResponse)))
+                completion(.init(error: NetworkError.noData, request: urlRequest, response: urlResponse, data: nil))
                 return
             }
             
-            completion(.success(unwrappedData))
+            completion(.init(value: unwrappedData, request: urlRequest, response: urlResponse, data: unwrappedData))
         }.resume()
     }
 
@@ -203,10 +225,10 @@ public class NetworkClient {
                                    body: HTTPBody? = nil,
                                    headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((Result<Data, Error>) -> Void)) {
+                                   completion: @escaping ((NetworkResponse<Data>) -> Void)) {
 
         guard let baseURL = baseURL else {
-            completion(.failure(NetworkError.missingBaseURL))
+            completion(.init(error: NetworkError.missingBaseURL))
             return
         }
 
@@ -222,20 +244,20 @@ public class NetworkClient {
                                    body: HTTPBody? = nil,
                                    headers: [String: String]? = nil,
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes,
-                                   completion: @escaping ((Result<Void, Error>) -> Void)) {
+                                   completion: @escaping ((NetworkResponse<Void>) -> Void)) {
 
-        requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { result in
+        requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { response in
 
             // `result` will _never_ be `success`. We have to examine the error to determine if the request was successful or not
 
-            switch result {
+            switch response.result {
             case .success:
-                completion(.success(()))
+                completion(transformSuccessfulResponse(response, newValue: ()))
             case .failure(let error):
                 if case NetworkError.noData = error {
-                    completion(.success(()))
+                    completion(transformSuccessfulResponse(response, newValue: ()))
                 } else {
-                    completion(.failure(error))
+                    completion(transformErrorResponse(response, error: error))
                 }
             }
         }
@@ -347,5 +369,16 @@ public class NetworkClient {
         let url = NSString.path(withComponents: [baseURL, path])
 
         request(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes, completion: completion)
+    }
+}
+
+extension NetworkClient {
+
+    fileprivate static func transformSuccessfulResponse<T,U>(_ response: NetworkResponse<T>, newValue: U) -> NetworkResponse<U> {
+        return NetworkResponse(value: newValue, request: response.request, response: response.response, data: response.data)
+    }
+
+    fileprivate static func transformErrorResponse<T,U>(_ response: NetworkResponse<T>, error: Error) -> NetworkResponse<U> {
+        return .init(error: error, request: response.request, response: response.response, data: response.data)
     }
 }

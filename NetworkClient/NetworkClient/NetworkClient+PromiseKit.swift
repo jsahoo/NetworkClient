@@ -11,7 +11,44 @@
 import Foundation
 import PromiseKit
 
+public struct PromiseResponse<T> {
+
+    /// The successfully deserialized value.
+    public let value: T
+
+    /// The URL request sent to the server.
+    public var request: URLRequest?
+
+    /// The server's response to the URL request.
+    public let response: HTTPURLResponse?
+
+    /// The data returned by the server.
+    public let data: Data?
+
+    public init<U>(value: T, networkResponse: NetworkResponse<U>) {
+        self.value = value
+        self.request = networkResponse.request
+        self.response = networkResponse.response
+        self.data = networkResponse.data
+    }
+}
+
 extension NetworkClient {
+
+    /// Executes a network request that returns Data.
+    public static func requestData(url: String,
+                                   method: HTTPMethod = .get,
+                                   queryParameters: Parameters? = nil,
+                                   body: HTTPBody? = nil,
+                                   headers: [String: String]? = nil,
+                                   validStatusCodes: [Int] = HTTPStatusCodes.successes) -> Promise<NetworkResponse<Data>> {
+
+        return Promise { seal in
+            requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { response in
+                seal.fulfill(response)
+            }
+        }
+    }
 
     /// Executes a network request that returns Data.
     public static func requestData(url: String,
@@ -22,8 +59,8 @@ extension NetworkClient {
                                    validStatusCodes: [Int] = HTTPStatusCodes.successes) -> Promise<Data> {
 
         return Promise { seal in
-            requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { result in
-                switch result {
+            requestData(url: url, method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes) { response in
+                switch response.result {
                 case .success(let data):
                     return seal.fulfill(data)
                 case .failure(let error):
