@@ -114,6 +114,11 @@ public class NetworkClient {
         networkMonitor.start(queue: DispatchQueue(label: "NWPathMonitor"))
         hasBeenInitialized = true
     }
+
+    /// If you'd like to override the default response handling logic, set this property to your custom response handling logic.
+    ///
+    /// All network requests regardless of the deserialized return type utilize the same response handling logic. By default they are handled with the default response handling logic. You can override the default response handling logic by setting this property to your own custom response handling logic.
+    public static var customResponseHandler: ((Data?, URLResponse?, Error?) -> (Swift.Result<Data, Error>, ResponseMetadata?))?
 }
 
 public class NetworkRequest {
@@ -156,7 +161,7 @@ public class NetworkRequest {
 
     /// Executes a network request and returns the raw data from the response.
     ///
-    /// This is where the actual network request for all NetworkClient request functions is performed. All other NetworkClient request functions utilize this function for making the actual network request.
+    /// This is where the actual network request for _all_ `NetworkRequest.responseXXX` functions are performed. All other `NetworkRequest.responseXXX` utilize this function for common response handling (i.e. validation, high-level error handling, etc.) before being deserialized to the appropriate type.
     public func responseData(completion: @escaping ((Swift.Result<Data, Error>, ResponseMetadata?) -> Void)) {
 
         NetworkClient.initialize()
@@ -198,6 +203,15 @@ public class NetworkRequest {
         }
 
         NetworkClient.session.dataTask(with: urlRequest) { (data, urlResponse, error) in
+            // If a custom response handler has been set, use it instead of the default (below)
+            if let customResponseHandler = NetworkClient.customResponseHandler {
+                let (result, metadata) = customResponseHandler(data, urlResponse, error)
+                completion(result, metadata)
+                return
+            }
+
+            // Default Response Handler
+
             metadata.data = data
             metadata.response = urlResponse as? HTTPURLResponse
 
