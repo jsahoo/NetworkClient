@@ -19,37 +19,45 @@ public enum HTTPMethod: String {
     case delete = "DELETE"
 }
 
-public enum HTTPBodyFormat {
-    case applicationXWWWFormURLEncoded
-    case applicationJSON
-    
-    var headerValue: String {
-        switch self {
-        case .applicationXWWWFormURLEncoded:
-            return "application/x-www-form-urlencoded"
-        case .applicationJSON:
-            return "application/json"
+public struct HTTPBody {
+
+    public enum Format {
+        case applicationXWWWFormURLEncoded
+        case applicationJSON
+
+        var headerValue: String {
+            switch self {
+            case .applicationXWWWFormURLEncoded:
+                return "application/x-www-form-urlencoded"
+            case .applicationJSON:
+                return "application/json"
+            }
         }
     }
-}
 
-public protocol HTTPBody { }
+    public let data: Data?
+    public let parameters: Parameters?
+    public let format: Format
 
-public struct HTTPBodyFromDictionary: HTTPBody {
-    public var parameters: Parameters
-    public var format: HTTPBodyFormat
-    
-    public init(parameters: Parameters, format: HTTPBodyFormat) {
-        self.parameters = parameters
-        self.format = format
+    /// Initialize a JSON HTTP body from the given parameters
+    public init(json: Parameters) throws {
+        self.parameters = json
+        self.format = .applicationJSON
+        self.data = try JSONSerialization.data(withJSONObject: json)
     }
-}
 
-public struct HTTPBodyFromEncodable: HTTPBody {
-    var data: Data
-    
-    public init<T: Encodable>(_ object: T) throws {
+    /// Initialize a Form URL Encoded HTTP body from the given parameters
+    public init(formURLEncodedParameters: Parameters) {
+        self.parameters = formURLEncodedParameters
+        self.format = .applicationXWWWFormURLEncoded
+        self.data = formURLEncodedParameters.map({"\($0.key)=\($0.value)"}).joined(separator: "&").data(using: .utf8)
+    }
+
+    /// Initialize a JSON HTTP body by serializing the given encodable object
+    public init<T: Encodable>(encodable object: T) throws {
         self.data = try JSONEncoder().encode(object)
+        self.format = .applicationJSON
+        self.parameters = nil
     }
 }
 
@@ -70,13 +78,6 @@ public enum NetworkError: Error {
     case invalidResponse
     case noData
     case deserializationFailure
-}
-
-public struct HTTPError: Error {
-    public var urlResponse: HTTPURLResponse
-    public var statusCode: Int {
-        urlResponse.statusCode
-    }
 }
 
 public struct ResponseMetadata {
@@ -181,22 +182,9 @@ public class NetworkRequest {
         urlRequest.httpMethod = method.rawValue
         var metadata = ResponseMetadata(request: urlRequest)
 
-        if let body = body as? HTTPBodyFromDictionary {
+        if let body = body, let data = body.data {
             urlRequest.addValue(body.format.headerValue, forHTTPHeaderField: "Content-Type")
-            switch body.format {
-            case .applicationXWWWFormURLEncoded:
-                urlRequest.httpBody = body.parameters.map({"\($0.key)=\($0.value)"}).joined(separator: "&").data(using: .utf8)
-            case .applicationJSON:
-                do {
-                    urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body.parameters)
-                } catch {
-                    completion(.failure(error), metadata)
-                    return
-                }
-            }
-        } else if let body = body as? HTTPBodyFromEncodable {
-            urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            urlRequest.httpBody = body.data
+            urlRequest.httpBody = data
         }
 
         headers?.forEach { urlRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
