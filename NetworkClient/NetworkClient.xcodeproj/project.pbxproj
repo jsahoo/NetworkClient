@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		420E320224ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420E320124ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift */; };
 		420E320524ADA9CC001A67D1 /* PromiseKit in Frameworks */ = {isa = PBXBuildFile; productRef = 420E320424ADA9CC001A67D1 /* PromiseKit */; };
+		428A32A824AFC61500E001D8 /* ResponseSerializationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A32A724AFC61400E001D8 /* ResponseSerializationTests.swift */; };
 		89FBA3EF23C7DC0E009B3B2C /* NetworkClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89FBA3E523C7DC0E009B3B2C /* NetworkClient.framework */; };
 		89FBA3F423C7DC0E009B3B2C /* NetworkClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FBA3F323C7DC0E009B3B2C /* NetworkClientTests.swift */; };
 		89FBA3F623C7DC0E009B3B2C /* NetworkClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 89FBA3E823C7DC0E009B3B2C /* NetworkClient.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -27,6 +28,7 @@
 
 /* Begin PBXFileReference section */
 		420E320124ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NetworkClient+PromiseKit.swift"; sourceTree = "<group>"; };
+		428A32A724AFC61400E001D8 /* ResponseSerializationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseSerializationTests.swift; sourceTree = "<group>"; };
 		89FBA3E523C7DC0E009B3B2C /* NetworkClient.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = NetworkClient.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		89FBA3E823C7DC0E009B3B2C /* NetworkClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkClient.h; sourceTree = "<group>"; };
 		89FBA3E923C7DC0E009B3B2C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -89,6 +91,7 @@
 			isa = PBXGroup;
 			children = (
 				89FBA3F323C7DC0E009B3B2C /* NetworkClientTests.swift */,
+				428A32A724AFC61400E001D8 /* ResponseSerializationTests.swift */,
 				89FBA3F523C7DC0E009B3B2C /* Info.plist */,
 			);
 			path = NetworkClientTests;
@@ -219,6 +222,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				428A32A824AFC61500E001D8 /* ResponseSerializationTests.swift in Sources */,
 				89FBA3F423C7DC0E009B3B2C /* NetworkClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

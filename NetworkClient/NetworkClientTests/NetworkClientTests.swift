@@ -11,104 +11,118 @@ import XCTest
 
 class NetworkClientTests: XCTestCase {
 
-    func testGetRequestSingleObjectResponse() {
-        let expectation = self.expectation(description: "Request should succeed; response should contain a single item.")
-        
-        let url = "https://postman-echo.com/get"
-        NetworkClient.request(url: url) { (result: Result<PostmanGetResponse, Error>) in
-            
-            switch result {
-            case .success:
-                break
-            case .failure(let error):
-                XCTFail(error.localizedDescription)
-            }
+    override func setUp() {
+        super.setUp()
+        NetworkClient.customResponseHandler = nil
+        NetworkClient.baseURL = nil
+    }
+
+    func testBasicGETRequest() {
+        let expectation = self.expectation(description: "")
+
+        NetworkRequest(url: "https://postman-echo.com/get").responseData().done { data in
             expectation.fulfill()
+        }.catch { error in
+            XCTFail(error.localizedDescription)
         }
-        
+
         waitForExpectations(timeout: 10)
     }
-    
-    func testGetRequestArrayResponse() {
-        
-        struct Photo: Codable {
-            var title: String
-            var thumbnailUrl: String
-            var url: String
-        }
-        
-        let expectation = self.expectation(description: "Request should succeed; response should contain an array of items.")
-        
-        let url = "https://jsonplaceholder.typicode.com/photos"
-        NetworkClient.request(url: url) { (result: Result<[Photo], Error>) in
-            
-            switch result {
-            case .success(let photos):
-                XCTAssert(photos.isEmpty == false)
-            case .failure(let error):
-                XCTFail(error.localizedDescription)
-            }
-            expectation.fulfill()
-        }
-        
-        waitForExpectations(timeout: 10)
-    }
-    
-    func testGetRequestWithQueryParameters() {
-        let expectation = self.expectation(description: "Request should succeed; server should recognize query parameters passed in.")
-        
+
+    func testGETRequestWithQueryParameters() {
+        let expectation = self.expectation(description: "")
+
         let url = "https://postman-echo.com/get"
         let queryParameters: Parameters = ["foo1": "bar1", "foo2": "bar2"]
-        NetworkClient.request(url: url, queryParameters: queryParameters) { (result: Result<PostmanGetResponse, Error>) in
-            
-            switch result {
-            case .success(let responseObject):
-                XCTAssertEqual(responseObject.args, queryParameters as? [String: String])
-            case .failure(let error):
-                XCTFail(error.localizedDescription)
-            }
+        NetworkRequest(url: url, queryParameters: queryParameters).responseDecodable().done { (responseObject: PostmanGetResponse) in
+            XCTAssertEqual(responseObject.args, queryParameters as? [String: String])
             expectation.fulfill()
+        }.catch { error in
+            XCTFail(error.localizedDescription)
         }
-        
+
         waitForExpectations(timeout: 10)
     }
-    
+
     func testGetRequestWithQueryParametersInURL() {
-        let expectation = self.expectation(description: "Request should succeed; server should recognize query parameters embedded in the URL.")
-        
+        let expectation = self.expectation(description: "")
+
         let url = "https://postman-echo.com/get?foo1=bar1&foo2=bar2"
-        NetworkClient.request(url: url) { (result: Result<PostmanGetResponse, Error>) in
-            
-            switch result {
-            case .success(let responseObject):
-                XCTAssertEqual(responseObject.args, ["foo1": "bar1", "foo2": "bar2"])
-            case .failure(let error):
-                XCTFail(error.localizedDescription)
-            }
+        NetworkRequest(url: url).responseDecodable().done { (responseObject: PostmanGetResponse) in
+            XCTAssertEqual(responseObject.args, ["foo1": "bar1", "foo2": "bar2"])
             expectation.fulfill()
+        }.catch { error in
+            XCTFail(error.localizedDescription)
         }
-        
+
         waitForExpectations(timeout: 10)
     }
-    
+
     /// In this test we will only consider the request successful if the status code is 500. The test API will return 200, so the request should complete with an error.
     func testStatusCodeValidation() {
         let expectation = self.expectation(description: "Request should fail due to invalid status code.")
-        
+
         let url = "https://postman-echo.com/get"
-        NetworkClient.request(url: url, validStatusCodes: [500]) { (result: Result<PostmanGetResponse, Error>) in
-            
-            switch result {
-            case .success:
+        NetworkRequest(url: url, validStatusCodes: [500]).responseDataWithMetadata().done { _ in
+            XCTFail("Request should not have succeeded")
+        }.catch { error in
+            guard let error = error as? PromiseNetworkError else {
                 XCTFail()
-            case .failure(let error):
-                XCTAssert((error as? NetworkError) == .invalidStatusCode)
+                return
             }
-            expectation.fulfill()
+            XCTAssertNotEqual(error.responseMetadata?.response?.statusCode, 500)
+            switch error.error as? NetworkError {
+            case .some(.invalidStatusCode):
+                expectation.fulfill()
+            default:
+                XCTFail("Error should have been .invalidStatusCode")
+            }
         }
-        
+
         waitForExpectations(timeout: 10)
     }
+
+    func testCustomResponseHandler() {
+        let testError = NSError(domain: "Test", code: 0, userInfo: nil)
+
+        NetworkClient.customResponseHandler = { data, urlResponse, error -> (Swift.Result<Data, Error>, ResponseMetadata?) in
+            // For testing purposes, we'll make this custom response handler error out with a custom error
+            return (.failure(testError), nil)
+        }
+
+        let expectation = self.expectation(description: "")
+
+        NetworkRequest(url: "https://postman-echo.com/get").responseData().done { data in
+            XCTFail("Request should not have succeeded")
+        }.catch { error in
+            XCTAssertEqual(error as NSError, testError)
+            expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 10)
+    }
+
+    func testDefaultBaseURL() {
+        NetworkClient.baseURL = {
+            return "https://postman-echo.com"
+        }
+
+        let expectation = self.expectation(description: "")
+
+        NetworkRequest(path: "/get").responseDecodable().done { (object: PostmanGetResponse) in
+            expectation.fulfill()
+        }.catch { error in
+            XCTFail(error.localizedDescription)
+        }
+
+        waitForExpectations(timeout: 10)
+    }
+//
+
+//
+
+//
+
 }
 
 struct PostmanGetResponse: Codable {
