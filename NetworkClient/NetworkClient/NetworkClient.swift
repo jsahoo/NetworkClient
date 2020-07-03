@@ -104,6 +104,7 @@ public class NetworkClient {
     public private(set) static var hasNetworkConnection = true
     fileprivate static var hasBeenInitialized = false
 
+    // TODO: Support custom sessions, sessions with certificate pinning
     fileprivate static let session = URLSession(configuration: .default)
     
     public static func initialize() {
@@ -115,6 +116,13 @@ public class NetworkClient {
         hasBeenInitialized = true
     }
 
+    /// If many of your APIs share the same base URL, you can use this closure to return your base URL.\n **NOTE** This property **MUST** be set before using `NetworkRequest.init(path:_)` otherwise a fatal error will be thrown.
+    ///
+    /// We use a closure so that the base URL can be determined at execution time, i.e. to support dynamic base URLs that change based on the current environment.
+    /// - Warning: This property **MUST** be set before using `NetworkRequest.init(path:_)` otherwise a fatal error will be thrown.
+    public static var baseURL: (() -> String)!
+
+
     /// If you'd like to override the default response handling logic, set this property to your custom response handling logic.
     ///
     /// All network requests regardless of the deserialized return type utilize the same response handling logic. By default they are handled with the default response handling logic. You can override the default response handling logic by setting this property to your own custom response handling logic.
@@ -122,10 +130,6 @@ public class NetworkClient {
 }
 
 public class NetworkRequest {
-
-    public class var baseURL: String {
-        return ""
-    }
 
     public var url: String
     public var method: HTTPMethod = .get
@@ -150,13 +154,14 @@ public class NetworkRequest {
     }
 
     /// Initialize a NetworkRequest using the default base URL and the given path.
+    /// - Requires: `NetworkClient.baseURL` **MUST** be set otherwise a fatal error will be thrown.
     public convenience init(path: String,
                             method: HTTPMethod = .get,
                             queryParameters: Parameters? = nil,
                             body: HTTPBody? = nil,
                             headers: [String: String]? = nil,
                             validStatusCodes: [Int] = HTTPStatusCodes.successes) {
-        self.init(url: NSString.path(withComponents: [NetworkRequest.baseURL, path]), method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes)
+        self.init(url: NSString.path(withComponents: [NetworkClient.baseURL(), path]), method: method, queryParameters: queryParameters, body: body, headers: headers, validStatusCodes: validStatusCodes)
     }
 
     /// Executes a network request and returns the raw data from the response.
