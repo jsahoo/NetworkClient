@@ -83,13 +83,13 @@ public enum NetworkError: Error {
 public struct ResponseMetadata {
 
     /// The URL request sent to the server.
-    public fileprivate(set) var request: URLRequest?
+    public var request: URLRequest?
 
     /// The server's response to the URL request.
-    public fileprivate(set) var response: HTTPURLResponse?
+    public var response: HTTPURLResponse?
 
     /// The data returned by the server.
-    public fileprivate(set) var data: Data?
+    public var data: Data?
 
     public init(request: URLRequest? = nil, response: HTTPURLResponse? = nil, data: Data? = nil) {
         self.request = request
@@ -126,7 +126,7 @@ public class NetworkClient {
     /// If you'd like to override the default response handling logic, set this property to your custom response handling logic.
     ///
     /// All network requests regardless of the deserialized return type utilize the same response handling logic. By default they are handled with the default response handling logic. You can override the default response handling logic by setting this property to your own custom response handling logic.
-    public static var customResponseHandler: ((Data?, URLResponse?, Error?) -> (Swift.Result<Data, Error>, ResponseMetadata?))?
+    public static var customResponseHandler: ((NetworkRequest, ResponseMetadata, Data?, URLResponse?, Error?) -> (Swift.Result<Data, Error>, ResponseMetadata))?
 }
 
 public class NetworkRequest {
@@ -210,7 +210,7 @@ public class NetworkRequest {
         NetworkClient.session.dataTask(with: urlRequest) { (data, urlResponse, error) in
             // If a custom response handler has been set, use it instead of the default (below)
             if let customResponseHandler = NetworkClient.customResponseHandler {
-                let (result, metadata) = customResponseHandler(data, urlResponse, error)
+                let (result, metadata) = customResponseHandler(self, metadata, data, urlResponse, error)
                 completion(result, metadata)
                 return
             }

@@ -85,9 +85,9 @@ class NetworkClientTests: XCTestCase {
     func testCustomResponseHandler() {
         let testError = NSError(domain: "Test", code: 0, userInfo: nil)
 
-        NetworkClient.customResponseHandler = { data, urlResponse, error -> (Swift.Result<Data, Error>, ResponseMetadata?) in
+        NetworkClient.customResponseHandler = { networkRequest, metadata, data, urlResponse, error -> (Swift.Result<Data, Error>, ResponseMetadata) in
             // For testing purposes, we'll make this custom response handler error out with a custom error
-            return (.failure(testError), nil)
+            return (.failure(testError), ResponseMetadata(response: urlResponse as? HTTPURLResponse, data: data))
         }
 
         let expectation = self.expectation(description: "")
@@ -97,6 +97,53 @@ class NetworkClientTests: XCTestCase {
         }.catch { error in
             XCTAssertEqual(error as NSError, testError)
             expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 10)
+    }
+
+    /// Use a custom response handler to recreate the default response handling logic while also adding additional custom logic
+    func testCustomResponseHandler2() {
+        let testString = "Testing123"
+
+        NetworkClient.customResponseHandler = { networkRequest, metadata, data, urlResponse, error -> (Swift.Result<Data, Error>, ResponseMetadata) in
+
+            // Recreate the default response handling logic
+
+            var metadata = metadata
+            metadata.data = data
+            metadata.response = urlResponse as? HTTPURLResponse
+
+            if let error = error {
+                return (.failure(error), metadata)
+            }
+
+            guard let urlResponse = urlResponse as? HTTPURLResponse else {
+                return (.failure(NetworkError.noResponse), metadata)
+            }
+
+            guard networkRequest.validStatusCodes.contains(urlResponse.statusCode) else {
+                return (.failure(NetworkError.invalidStatusCode(urlResponse.statusCode)), metadata)
+            }
+
+            guard let _ = data else {
+                return (.failure(NetworkError.noData), metadata)
+            }
+
+            // Additional custom logic
+
+            let testStringAsData = testString.data(using: .utf8)!
+            return (.success(testStringAsData), metadata)
+        }
+
+        let expectation = self.expectation(description: "")
+
+        NetworkRequest(url: "https://postman-echo.com/get").responseData().done { data in
+            // Normally this request would return a PostmanGetResponse, but because we've created a custom response handler to return our custom data, that's what we should get
+            XCTAssertEqual(testString, String(data: data, encoding: .utf8)!)
+            expectation.fulfill()
+        }.catch { error in
+            XCTFail(error.localizedDescription)
         }
 
         waitForExpectations(timeout: 10)
@@ -117,12 +164,6 @@ class NetworkClientTests: XCTestCase {
 
         waitForExpectations(timeout: 10)
     }
-//
-
-//
-
-//
-
 }
 
 struct PostmanGetResponse: Codable {
