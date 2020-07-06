@@ -311,17 +311,35 @@ import ObjectMapper
 
 extension NetworkRequest {
 
-    /// Executes a network request and deserializes the response to a Mappable object.
-    public func responseMappable<T: Mappable>(completion: @escaping ((Result<T, Error>, ResponseMetadata?) -> Void)) {
+    /// Executes a network request and deserializes the response to a BaseMappable-conforming object.
+    public func responseMappable<T: BaseMappable>(completion: @escaping ((Result<T, Error>, ResponseMetadata?) -> Void)) {
 
         responseJSON { result, metadata in
             switch result {
             case .success(let json):
-                guard let json = json as? [String: Any], let object = T(JSON: json) else {
+                if let mappable = T.self as? Mappable.Type {
+                    guard let json = json as? [String: Any], let object = mappable.init(JSON: json) as? T else {
+                        completion(.failure(NetworkError.deserializationFailure), metadata)
+                        return
+                    }
+                    completion(.success(object), metadata)
+                } else if let immutableMappable = T.self as? ImmutableMappable.Type {
+                    guard let json = json as? [String: Any] else {
+                        completion(.failure(NetworkError.deserializationFailure), metadata)
+                        return
+                    }
+                    do {
+                        guard let object = try immutableMappable.init(JSON: json) as? T else {
+                            completion(.failure(NetworkError.deserializationFailure), metadata)
+                            return
+                        }
+                        completion(.success(object), metadata)
+                    } catch {
+                        completion(.failure(error), metadata)
+                    }
+                } else {
                     completion(.failure(NetworkError.deserializationFailure), metadata)
-                    return
                 }
-                completion(.success(object), metadata)
             case .failure(let error):
                 completion(.failure(error), metadata)
             }
@@ -339,27 +357,6 @@ extension NetworkRequest {
                     return
                 }
                 completion(.success(Mapper<T>().mapArray(JSONArray: json)), metadata)
-            case .failure(let error):
-                completion(.failure(error), metadata)
-            }
-        }
-    }
-
-    /// Executes a network request and deserializes the response to an ImmutableMappable object.
-    public func responseMappable<T: ImmutableMappable>(completion: @escaping ((Result<T, Error>, ResponseMetadata?) -> Void)) {
-
-        responseJSON { result, metadata in
-            switch result {
-            case .success(let json):
-                guard let json = json as? [String: Any] else {
-                    completion(.failure(NetworkError.deserializationFailure), metadata)
-                    return
-                }
-                do {
-                    completion(.success(try T(JSON: json)), metadata)
-                } catch {
-                    completion(.failure(error), metadata)
-                }
             case .failure(let error):
                 completion(.failure(error), metadata)
             }
