@@ -298,3 +298,86 @@ public class NetworkRequest {
         }
     }
 }
+
+#if canImport(ObjectMapper)
+import ObjectMapper
+
+extension NetworkRequest {
+
+    /// Executes a network request and deserializes the response to a Mappable object.
+    public func responseMappable<T: Mappable>(completion: @escaping ((Result<T, Error>, ResponseMetadata?) -> Void)) {
+
+        responseJSON { result, metadata in
+            switch result {
+            case .success(let json):
+                guard let json = json as? [String: Any], let object = T(JSON: json) else {
+                    completion(.failure(NetworkError.deserializationFailure), metadata)
+                    return
+                }
+                completion(.success(object), metadata)
+            case .failure(let error):
+                completion(.failure(error), metadata)
+            }
+        }
+    }
+
+    /// Executes a network request and deserializes the response to an array of Mappable object.
+    public func responseMappableArray<T: Mappable>(completion: @escaping ((Result<[T], Error>, ResponseMetadata?) -> Void)) {
+
+        responseJSON { result, metadata in
+            switch result {
+            case .success(let json):
+                guard let json = json as? [[String: Any]] else {
+                    completion(.failure(NetworkError.deserializationFailure), metadata)
+                    return
+                }
+                completion(.success(Mapper<T>().mapArray(JSONArray: json)), metadata)
+            case .failure(let error):
+                completion(.failure(error), metadata)
+            }
+        }
+    }
+
+    /// Executes a network request and deserializes the response to an ImmutableMappable object.
+    public func responseMappable<T: ImmutableMappable>(completion: @escaping ((Result<T, Error>, ResponseMetadata?) -> Void)) {
+
+        responseJSON { result, metadata in
+            switch result {
+            case .success(let json):
+                guard let json = json as? [String: Any] else {
+                    completion(.failure(NetworkError.deserializationFailure), metadata)
+                    return
+                }
+                do {
+                    completion(.success(try T(JSON: json)), metadata)
+                } catch {
+                    completion(.failure(error), metadata)
+                }
+            case .failure(let error):
+                completion(.failure(error), metadata)
+            }
+        }
+    }
+
+    /// Executes a network request and deserializes the response to an array of ImmutableMappable object.
+    public func responseMappableArray<T: ImmutableMappable>(completion: @escaping ((Result<[T], Error>, ResponseMetadata?) -> Void)) {
+
+        responseJSON { result, metadata in
+            switch result {
+            case .success(let json):
+                guard let json = json as? [[String: Any]] else {
+                    completion(.failure(NetworkError.deserializationFailure), metadata)
+                    return
+                }
+                do {
+                    completion(.success(try Mapper<T>().mapArray(JSONArray: json)), metadata)
+                } catch {
+                    completion(.failure(error), metadata)
+                }
+            case .failure(let error):
+                completion(.failure(error), metadata)
+            }
+        }
+    }
+}
+#endif

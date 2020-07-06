@@ -10,6 +10,7 @@
 		420E320224ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420E320124ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift */; };
 		420E320524ADA9CC001A67D1 /* PromiseKit in Frameworks */ = {isa = PBXBuildFile; productRef = 420E320424ADA9CC001A67D1 /* PromiseKit */; };
 		428A32A824AFC61500E001D8 /* ResponseSerializationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A32A724AFC61400E001D8 /* ResponseSerializationTests.swift */; };
+		428A32AF24B3A06F00E001D8 /* ObjectMapper in Frameworks */ = {isa = PBXBuildFile; productRef = 428A32AE24B3A06F00E001D8 /* ObjectMapper */; };
 		89FBA3EF23C7DC0E009B3B2C /* NetworkClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89FBA3E523C7DC0E009B3B2C /* NetworkClient.framework */; };
 		89FBA3F423C7DC0E009B3B2C /* NetworkClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FBA3F323C7DC0E009B3B2C /* NetworkClientTests.swift */; };
 		89FBA3F623C7DC0E009B3B2C /* NetworkClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 89FBA3E823C7DC0E009B3B2C /* NetworkClient.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -43,6 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				428A32AF24B3A06F00E001D8 /* ObjectMapper in Frameworks */,
 				420E320524ADA9CC001A67D1 /* PromiseKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -127,6 +129,7 @@
 			name = NetworkClient;
 			packageProductDependencies = (
 				420E320424ADA9CC001A67D1 /* PromiseKit */,
+				428A32AE24B3A06F00E001D8 /* ObjectMapper */,
 			);
 			productName = NetworkClient;
 			productReference = 89FBA3E523C7DC0E009B3B2C /* NetworkClient.framework */;
@@ -180,6 +183,7 @@
 			mainGroup = 89FBA3DB23C7DC0E009B3B2C;
 			packageReferences = (
 				420E320324ADA9CB001A67D1 /* XCRemoteSwiftPackageReference "PromiseKit" */,
+				428A32AD24B3A06F00E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */,
 			);
 			productRefGroup = 89FBA3E623C7DC0E009B3B2C /* Products */;
 			projectDirPath = "";
@@ -486,6 +490,14 @@
 				minimumVersion = 6.13.2;
 			};
 		};
+		428A32AD24B3A06F00E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tristanhimmelman/ObjectMapper.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.2.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -493,6 +505,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 420E320324ADA9CB001A67D1 /* XCRemoteSwiftPackageReference "PromiseKit" */;
 			productName = PromiseKit;
+		};
+		428A32AE24B3A06F00E001D8 /* ObjectMapper */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 428A32AD24B3A06F00E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */;
+			productName = ObjectMapper;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
