@@ -10,7 +10,8 @@
 		420E320224ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420E320124ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift */; };
 		420E320524ADA9CC001A67D1 /* PromiseKit in Frameworks */ = {isa = PBXBuildFile; productRef = 420E320424ADA9CC001A67D1 /* PromiseKit */; };
 		428A32A824AFC61500E001D8 /* ResponseSerializationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A32A724AFC61400E001D8 /* ResponseSerializationTests.swift */; };
-		428A32AF24B3A06F00E001D8 /* ObjectMapper in Frameworks */ = {isa = PBXBuildFile; productRef = 428A32AE24B3A06F00E001D8 /* ObjectMapper */; };
+		428A32B424B3BD4800E001D8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A32B324B3BD4800E001D8 /* Models.swift */; };
+		428A32B724B3BDA100E001D8 /* ObjectMapper in Frameworks */ = {isa = PBXBuildFile; productRef = 428A32B624B3BDA100E001D8 /* ObjectMapper */; };
 		89FBA3EF23C7DC0E009B3B2C /* NetworkClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89FBA3E523C7DC0E009B3B2C /* NetworkClient.framework */; };
 		89FBA3F423C7DC0E009B3B2C /* NetworkClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FBA3F323C7DC0E009B3B2C /* NetworkClientTests.swift */; };
 		89FBA3F623C7DC0E009B3B2C /* NetworkClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 89FBA3E823C7DC0E009B3B2C /* NetworkClient.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -30,6 +31,7 @@
 /* Begin PBXFileReference section */
 		420E320124ADA8ED001A67D1 /* NetworkClient+PromiseKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NetworkClient+PromiseKit.swift"; sourceTree = "<group>"; };
 		428A32A724AFC61400E001D8 /* ResponseSerializationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseSerializationTests.swift; sourceTree = "<group>"; };
+		428A32B324B3BD4800E001D8 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		89FBA3E523C7DC0E009B3B2C /* NetworkClient.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = NetworkClient.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		89FBA3E823C7DC0E009B3B2C /* NetworkClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkClient.h; sourceTree = "<group>"; };
 		89FBA3E923C7DC0E009B3B2C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -44,7 +46,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				428A32AF24B3A06F00E001D8 /* ObjectMapper in Frameworks */,
+				428A32B724B3BDA100E001D8 /* ObjectMapper in Frameworks */,
 				420E320524ADA9CC001A67D1 /* PromiseKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -60,12 +62,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		428A32B824B3BDB800E001D8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		89FBA3DB23C7DC0E009B3B2C = {
 			isa = PBXGroup;
 			children = (
 				89FBA3E723C7DC0E009B3B2C /* NetworkClient */,
 				89FBA3F223C7DC0E009B3B2C /* NetworkClientTests */,
 				89FBA3E623C7DC0E009B3B2C /* Products */,
+				428A32B824B3BDB800E001D8 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -92,6 +102,7 @@
 		89FBA3F223C7DC0E009B3B2C /* NetworkClientTests */ = {
 			isa = PBXGroup;
 			children = (
+				428A32B324B3BD4800E001D8 /* Models.swift */,
 				89FBA3F323C7DC0E009B3B2C /* NetworkClientTests.swift */,
 				428A32A724AFC61400E001D8 /* ResponseSerializationTests.swift */,
 				89FBA3F523C7DC0E009B3B2C /* Info.plist */,
@@ -129,7 +140,7 @@
 			name = NetworkClient;
 			packageProductDependencies = (
 				420E320424ADA9CC001A67D1 /* PromiseKit */,
-				428A32AE24B3A06F00E001D8 /* ObjectMapper */,
+				428A32B624B3BDA100E001D8 /* ObjectMapper */,
 			);
 			productName = NetworkClient;
 			productReference = 89FBA3E523C7DC0E009B3B2C /* NetworkClient.framework */;
@@ -149,6 +160,8 @@
 				89FBA3F123C7DC0E009B3B2C /* PBXTargetDependency */,
 			);
 			name = NetworkClientTests;
+			packageProductDependencies = (
+			);
 			productName = NetworkClientTests;
 			productReference = 89FBA3EE23C7DC0E009B3B2C /* NetworkClientTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -183,7 +196,7 @@
 			mainGroup = 89FBA3DB23C7DC0E009B3B2C;
 			packageReferences = (
 				420E320324ADA9CB001A67D1 /* XCRemoteSwiftPackageReference "PromiseKit" */,
-				428A32AD24B3A06F00E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */,
+				428A32B524B3BDA100E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */,
 			);
 			productRefGroup = 89FBA3E623C7DC0E009B3B2C /* Products */;
 			projectDirPath = "";
@@ -226,6 +239,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				428A32B424B3BD4800E001D8 /* Models.swift in Sources */,
 				428A32A824AFC61500E001D8 /* ResponseSerializationTests.swift in Sources */,
 				89FBA3F423C7DC0E009B3B2C /* NetworkClientTests.swift in Sources */,
 			);
@@ -490,7 +504,7 @@
 				minimumVersion = 6.13.2;
 			};
 		};
-		428A32AD24B3A06F00E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */ = {
+		428A32B524B3BDA100E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/tristanhimmelman/ObjectMapper.git";
 			requirement = {
@@ -506,9 +520,9 @@
 			package = 420E320324ADA9CB001A67D1 /* XCRemoteSwiftPackageReference "PromiseKit" */;
 			productName = PromiseKit;
 		};
-		428A32AE24B3A06F00E001D8 /* ObjectMapper */ = {
+		428A32B624B3BDA100E001D8 /* ObjectMapper */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 428A32AD24B3A06F00E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */;
+			package = 428A32B524B3BDA100E001D8 /* XCRemoteSwiftPackageReference "ObjectMapper" */;
 			productName = ObjectMapper;
 		};
 /* End XCSwiftPackageProductDependency section */

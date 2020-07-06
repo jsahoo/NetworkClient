@@ -34,7 +34,7 @@ class NetworkClientTests: XCTestCase {
 
         let url = "https://postman-echo.com/get"
         let queryParameters: Parameters = ["foo1": "bar1", "foo2": "bar2"]
-        NetworkRequest(url: url, queryParameters: queryParameters).responseDecodable().done { (responseObject: PostmanGetResponse) in
+        NetworkRequest(url: url, queryParameters: queryParameters).responseDecodable().done { (responseObject: PostmanGetResponseCodable) in
             XCTAssertEqual(responseObject.args, queryParameters as? [String: String])
             expectation.fulfill()
         }.catch { error in
@@ -48,7 +48,7 @@ class NetworkClientTests: XCTestCase {
         let expectation = self.expectation(description: "")
 
         let url = "https://postman-echo.com/get?foo1=bar1&foo2=bar2"
-        NetworkRequest(url: url).responseDecodable().done { (responseObject: PostmanGetResponse) in
+        NetworkRequest(url: url).responseDecodable().done { (responseObject: PostmanGetResponseCodable) in
             XCTAssertEqual(responseObject.args, ["foo1": "bar1", "foo2": "bar2"])
             expectation.fulfill()
         }.catch { error in
@@ -156,7 +156,7 @@ class NetworkClientTests: XCTestCase {
 
         let expectation = self.expectation(description: "")
 
-        NetworkRequest(path: "/get").responseDecodable().done { (object: PostmanGetResponse) in
+        NetworkRequest(path: "/get").responseDecodable().done { (object: PostmanGetResponseCodable) in
             expectation.fulfill()
         }.catch { error in
             XCTFail(error.localizedDescription)
@@ -164,9 +164,4 @@ class NetworkClientTests: XCTestCase {
 
         waitForExpectations(timeout: 10)
     }
-}
-
-struct PostmanGetResponse: Codable {
-    var args: [String: String]
-    var url: String
 }
