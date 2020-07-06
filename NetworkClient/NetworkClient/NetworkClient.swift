@@ -36,28 +36,35 @@ public struct HTTPBody {
     }
 
     public let data: Data?
-    public let parameters: Parameters?
+    public let dictionaryRepresentation: [String: Any]?
     public let format: Format
 
     /// Initialize a JSON HTTP body from the given parameters
-    public init(json: Parameters) throws {
-        self.parameters = json
+    public init(json: [String: Any]) {
+        self.dictionaryRepresentation = json
         self.format = .applicationJSON
-        self.data = try JSONSerialization.data(withJSONObject: json)
+        self.data = try? JSONSerialization.data(withJSONObject: json)
     }
 
     /// Initialize a Form URL Encoded HTTP body from the given parameters
-    public init(formURLEncodedParameters: Parameters) {
-        self.parameters = formURLEncodedParameters
+    public init(formURLEncodedParameters: [String: Any]) {
+        self.dictionaryRepresentation = formURLEncodedParameters
         self.format = .applicationXWWWFormURLEncoded
         self.data = formURLEncodedParameters.map({"\($0.key)=\($0.value)"}).joined(separator: "&").data(using: .utf8)
     }
 
     /// Initialize a JSON HTTP body by serializing the given encodable object
     public init<T: Encodable>(encodable object: T) throws {
-        self.data = try JSONEncoder().encode(object)
+        self.data = try? JSONEncoder().encode(object)
         self.format = .applicationJSON
-        self.parameters = nil
+        self.dictionaryRepresentation = nil
+    }
+
+    /// Initialize a HTTP body from the given data and format
+    init(data: Data, format: Format) throws {
+        self.dictionaryRepresentation = nil
+        self.format = format
+        self.data = data
     }
 }
 
