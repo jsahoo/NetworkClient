@@ -120,8 +120,6 @@ import ObjectMapper
 
 extension NetworkRequest {
 
-    // MARK: - Mappable/Immutable
-
     /// Executes a network request and deserializes the response to a Mappable object.
     public func responseMappableWithMetadata<T: BaseMappable>() -> Promise<(T, ResponseMetadata?)> {
         return Promise { seal in
@@ -146,10 +144,8 @@ extension NetworkRequest {
         }
     }
 
-    // MARK: - [Mappable] + [ImmutableMappable]
-
-    /// Executes a network request and deserializes the response to an array of Mappable object.
-    public func responseMappableArrayWithMetadata<T: Mappable>() -> Promise<([T], ResponseMetadata?)>  {
+    /// Executes a network request and deserializes the response to an array of BaseMappable-conforming objects.
+    public func responseMappableArrayWithMetadata<T: BaseMappable>() -> Promise<([T], ResponseMetadata?)>  {
         return Promise { seal in
             responseMappableArray { (result: Swift.Result<[T], Error>, metadata: ResponseMetadata?) in
                 switch result {
@@ -162,32 +158,8 @@ extension NetworkRequest {
         }
     }
 
-    /// Executes a network request and deserializes the response to a Mappable object.
-    public func responseMappableArray<T: Mappable>() -> Promise<[T]> {
-        responseMappableArrayWithMetadata().then { objects, metadata -> Promise<[T]> in
-            return .value(objects)
-        }.recover { error -> Promise<[T]> in
-            // Re-throw the underlying error and exclude response metadata
-            throw (error as? PromiseNetworkError)?.error ?? error
-        }
-    }
-
-    /// Executes a network request and deserializes the response to an array of ImmutableMappable object.
-    public func responseMappableArrayWithMetadata<T: ImmutableMappable>() -> Promise<([T], ResponseMetadata?)>  {
-        return Promise { seal in
-            responseMappableArray { (result: Swift.Result<[T], Error>, metadata: ResponseMetadata?) in
-                switch result {
-                case .success(let object):
-                    return seal.fulfill((object, metadata))
-                case .failure(let error):
-                    return seal.reject(PromiseNetworkError(error: error, responseMetadata: metadata))
-                }
-            }
-        }
-    }
-
-    /// Executes a network request and deserializes the response to a ImmutableMappable object.
-    public func responseMappableArray<T: ImmutableMappable>() -> Promise<[T]> {
+    /// Executes a network request and deserializes the response to an array of BaseMappable-conforming objects.
+    public func responseMappableArray<T: BaseMappable>() -> Promise<[T]> {
         responseMappableArrayWithMetadata().then { objects, metadata -> Promise<[T]> in
             return .value(objects)
         }.recover { error -> Promise<[T]> in

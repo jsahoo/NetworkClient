@@ -61,9 +61,9 @@ struct PhotoMappable: Mappable {
 
 struct PhotoImmutableMappable: ImmutableMappable {
 
-    var title: String
-    var thumbnailUrl: String
-    var url: String
+    let title: String
+    let thumbnailUrl: String
+    let url: String
 
     init(map: Map) throws {
         title = try map.value("title")

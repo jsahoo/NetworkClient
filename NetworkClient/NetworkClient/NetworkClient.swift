@@ -346,8 +346,8 @@ extension NetworkRequest {
         }
     }
 
-    /// Executes a network request and deserializes the response to an array of Mappable object.
-    public func responseMappableArray<T: Mappable>(completion: @escaping ((Result<[T], Error>, ResponseMetadata?) -> Void)) {
+    /// Executes a network request and deserializes the response to an array of BaseMappable-conforming object.
+    public func responseMappableArray<T: BaseMappable>(completion: @escaping ((Result<[T], Error>, ResponseMetadata?) -> Void)) {
 
         responseJSON { result, metadata in
             switch result {
@@ -356,27 +356,17 @@ extension NetworkRequest {
                     completion(.failure(NetworkError.deserializationFailure), metadata)
                     return
                 }
-                completion(.success(Mapper<T>().mapArray(JSONArray: json)), metadata)
-            case .failure(let error):
-                completion(.failure(error), metadata)
-            }
-        }
-    }
 
-    /// Executes a network request and deserializes the response to an array of ImmutableMappable object.
-    public func responseMappableArray<T: ImmutableMappable>(completion: @escaping ((Result<[T], Error>, ResponseMetadata?) -> Void)) {
-
-        responseJSON { result, metadata in
-            switch result {
-            case .success(let json):
-                guard let json = json as? [[String: Any]] else {
-                    completion(.failure(NetworkError.deserializationFailure), metadata)
-                    return
-                }
-                do {
-                    completion(.success(try Mapper<T>().mapArray(JSONArray: json)), metadata)
-                } catch {
-                    completion(.failure(error), metadata)
+                if let _ = T.self as? Mappable.Type {
+                    completion(.success(Mapper<T>().mapArray(JSONArray: json)), metadata)
+                } else if let immutableMappable = T.self as? ImmutableMappable.Type {
+                    // We have to manually transform the JSON array to ImmutableMappable array due to an issue with not being able to force ObjectMapper to use the `mapArray` function specific to ImmutableMappable
+                    let mappedArray = json.compactMap { (jsonElement) in
+                        return try? immutableMappable.init(JSON: jsonElement)
+                    } as? [T] ?? [T]()
+                    completion(.success(mappedArray), metadata)
+                } else {
+                    completion(.success(Mapper<T>().mapArray(JSONArray: json)), metadata)
                 }
             case .failure(let error):
                 completion(.failure(error), metadata)

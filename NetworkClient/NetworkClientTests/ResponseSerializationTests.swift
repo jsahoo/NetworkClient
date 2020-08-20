@@ -84,6 +84,9 @@ class ResponseSerializationTests: XCTestCase {
         let url = "https://jsonplaceholder.typicode.com/photos"
         NetworkRequest(url: url).responseMappableArray().done { (photos: [PhotoMappable]) in
             XCTAssert(photos.isEmpty == false)
+            photos.forEach {
+                XCTAssert($0.title != nil)
+            }
             expectation.fulfill()
         }.catch { error in
             XCTFail(error.localizedDescription)
@@ -99,6 +102,7 @@ class ResponseSerializationTests: XCTestCase {
         let url = "https://jsonplaceholder.typicode.com/photos"
         NetworkRequest(url: url).responseMappableArray().done { (photos: [PhotoImmutableMappable]) in
             XCTAssert(photos.isEmpty == false)
+            // Note: Simply checking if the array is not empty is good enough for ImmutableMappable objects as the object's properties are non-optional, thus if any property was nil, the object would not be included in the array, and if all objects failed deserialization and subsquently weren't added to the array, the array would be empty
             expectation.fulfill()
         }.catch { error in
             XCTFail(error.localizedDescription)
