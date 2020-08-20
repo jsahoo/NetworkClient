@@ -123,7 +123,7 @@ public class NetworkClient {
         hasBeenInitialized = true
     }
 
-    /// If many of your APIs share the same base URL, you can use this closure to return your base URL.\n **NOTE** This property **MUST** be set before using `NetworkRequest.init(path:_)` otherwise a fatal error will be thrown.
+    /// If your APIs use the same base URL, you can use this closure to set your base URL. You can then use `NetworkRequest.init(path:_)` to construct all of your requests which will automatically construct the full URL using this base URL and the path given to the initializer. **NOTE**: This property **MUST** be set before using `NetworkRequest.init(path:_)` otherwise a fatal error will be thrown.
     ///
     /// We use a closure so that the base URL can be determined at execution time, i.e. to support dynamic base URLs that change based on the current environment.
     /// - Warning: This property **MUST** be set before using `NetworkRequest.init(path:_)` otherwise a fatal error will be thrown.
