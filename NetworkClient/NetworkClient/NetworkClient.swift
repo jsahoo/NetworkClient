@@ -8,6 +8,7 @@
 
 import Foundation
 import Network
+import ObjectMapper
 
 public typealias Parameters = [String: Any]
 public typealias DecodableRequestHandler<T> = ((T?, URLResponse?, Error?) -> Void)
@@ -306,9 +307,6 @@ public class NetworkRequest {
     }
 }
 
-#if canImport(ObjectMapper)
-import ObjectMapper
-
 extension NetworkRequest {
 
     /// Executes a network request and deserializes the response to a BaseMappable-conforming object.
@@ -374,4 +372,3 @@ extension NetworkRequest {
         }
     }
 }
-#endif
