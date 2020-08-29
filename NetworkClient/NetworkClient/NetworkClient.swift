@@ -82,10 +82,43 @@ public enum NetworkError: Error {
     case noResponse
     case missingBaseURL
     case invalidURL(url: String)
-    case invalidStatusCode(Int)
-    case invalidResponse
-    case noData
+    case invalidStatusCode(statusCode: Int, rawData: Data?, response: HTTPURLResponse)
+    case invalidResponse(rawData: Data?, response: HTTPURLResponse)
+    case noData(response: HTTPURLResponse)
     case deserializationFailure
+
+    public var statusCode: Int? {
+        switch self {
+        case .noNetworkConnection, .noResponse, .missingBaseURL, .invalidURL, .deserializationFailure:
+            return nil
+        case .invalidStatusCode(let statusCode, _, _):
+            return statusCode
+        case .invalidResponse(_, let response), .noData(let response):
+            return response.statusCode
+        }
+    }
+
+    public var rawData: Data? {
+        switch self {
+        case .noNetworkConnection, .noResponse, .missingBaseURL, .invalidURL, .deserializationFailure, .noData:
+            return nil
+        case .invalidStatusCode(_, let data, _):
+            return data
+        case .invalidResponse(let data, _):
+            return data
+        }
+    }
+
+    public var response: HTTPURLResponse? {
+        switch self {
+        case .noNetworkConnection, .noResponse, .missingBaseURL, .invalidURL, .deserializationFailure:
+            return nil
+        case .invalidStatusCode(_, _, let response):
+            return response
+        case .invalidResponse(_, let response), .noData(let response):
+            return response
+        }
+    }
 }
 
 public struct ResponseMetadata {
@@ -239,12 +272,12 @@ public class NetworkRequest {
             }
 
             guard self.validStatusCodes.contains(urlResponse.statusCode) else {
-                completion(.failure(NetworkError.invalidStatusCode(urlResponse.statusCode)), metadata)
+                completion(.failure(NetworkError.invalidStatusCode(statusCode: urlResponse.statusCode, rawData: data, response: urlResponse)), metadata)
                 return
             }
 
             guard let unwrappedData = data else {
-                completion(.failure(NetworkError.noData), metadata)
+                completion(.failure(NetworkError.noData(response: urlResponse)), metadata)
                 return
             }
 
